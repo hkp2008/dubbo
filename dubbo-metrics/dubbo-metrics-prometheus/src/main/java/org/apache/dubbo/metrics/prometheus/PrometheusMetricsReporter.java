@@ -63,9 +63,16 @@ public class PrometheusMetricsReporter extends AbstractMetricsReporter {
     private ScheduledExecutorService pushJobExecutor = null;
     private HttpServer prometheusExporterHttpServer = null;
     private Thread httpServerThread = null;
-
+    private static String HOSTNAME = "";
+    
     public PrometheusMetricsReporter(URL url, ApplicationModel applicationModel) {
         super(url, applicationModel);
+        try {
+			HOSTNAME = InetAddress.getLocalHost().getHostName();
+			logger.info("get host name:" + HOSTNAME);
+		} catch (UnknownHostException e) {
+			logger.error("", e);
+		}
     }
 
     @Override
@@ -124,9 +131,11 @@ public class PrometheusMetricsReporter extends AbstractMetricsReporter {
     }
 
     protected void push(PushGateway pushGateway, String job) {
+        Map<String, String> groupingKey = new HashMap<String, String>();
+		groupingKey.put("instance", HOSTNAME);
         try {
             refreshData();
-            pushGateway.pushAdd(prometheusRegistry.getPrometheusRegistry(), job);
+            pushGateway.pushAdd(prometheusRegistry.getPrometheusRegistry(), job, groupingKey);
         } catch (IOException e) {
             logger.error(COMMON_METRICS_COLLECTOR_EXCEPTION, "", "", "Error occurred when pushing metrics to prometheus: ", e);
         }
